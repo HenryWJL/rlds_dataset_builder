@@ -1,15 +1,15 @@
-from typing import Iterator, Tuple, Any
-
 import glob
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import tensorflow_hub as hub
 from tensorflow_datasets.core.utils import gcs_utils
-gcs_utils._is_gcs_disabled = True
+from typing import Iterator, Tuple, Any
+
+gcs_utils._is_gcs_disabled = True  # This is necessary if you are running code in the Chinese mainland
 
 
-class MagiClawDataset(tfds.core.GeneratorBasedBuilder):
+class MagiclawDataset(tfds.core.GeneratorBasedBuilder):
     """DatasetBuilder for magiclaw dataset."""
 
     VERSION = tfds.core.Version('0.1.0')
@@ -30,7 +30,7 @@ class MagiClawDataset(tfds.core.GeneratorBasedBuilder):
                         'rgb': tfds.features.Image(
                             shape=(480, 640, 3),
                             dtype=np.uint8,
-                            encoding_format='png',
+                            encoding_format='jpeg',
                             doc='iPhone built-in camera RGB observation.',
                         ),
                         'depth': tfds.features.Tensor(
@@ -129,11 +129,3 @@ class MagiClawDataset(tfds.core.GeneratorBasedBuilder):
         # for smallish datasets, use single-thread parsing
         for sample in episode_paths:
             yield _parse_example(sample)
-
-        # for large datasets use beam to parallelize data parsing (this will have initialization overhead)
-        # beam = tfds.core.lazy_imports.apache_beam
-        # return (
-        #         beam.Create(episode_paths)
-        #         | beam.Map(_parse_example)
-        # )
-
