@@ -3,7 +3,7 @@ import subprocess
 from format_converter import FormatConverter
 
 
-@click.command(help="Training policy on the datasets.")
+@click.command(help="Building TensorFlow datasets.")
 @click.option("-ed", "--episode_dir", type=str, required=True, help="The directory used for loading episodes.")
 @click.option("-s", "--split", type=click.Choice(['train', 'val']), default='train', help="The dataset split.")
 @click.option("-it", "--interp_type", type=click.Choice(['linear', 'nearest', 'nearest-up', 'zero', 'slinear', \
@@ -24,3 +24,4 @@ def main(episode_dir, split, interp_type) -> None:
 
 if __name__ == "__main__":
     main()
+    
