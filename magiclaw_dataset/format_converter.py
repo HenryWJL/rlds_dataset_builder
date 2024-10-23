@@ -125,7 +125,8 @@ class FormatConverter:
             force_r = self.load_csv(episode_dir.joinpath("R_ForceData.csv"))
             # We assume data collected by iPhone to have the same length. If not,
             # the episode would be discarded and would not appear in the dataset.
-            if not rgb_len == depth_len == pose_len:
+            # Besides, we also discard episodes without language instructions.
+            if not rgb_len == depth_len == pose_len or not any(language_instruction):
                 print(f"WARNING: episode {episode_dir.name} is discarded.")
                 continue
             # Align different sensory inputs. This is done via interpolation.
