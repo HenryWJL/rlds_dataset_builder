@@ -60,6 +60,9 @@ class FormatConverter:
             file.close()
         data.pop(0)  # Remove headers
         data = np.stack(data).astype(np.float32)
+        # Remove gripper angles with values -1
+        if data.shape[1] == 2:
+            data = data[data[:, 1] != -1]
         return data
 
     def fit_interpolator(self, data: np.ndarray) -> si.interp1d:
@@ -115,58 +118,36 @@ class FormatConverter:
             rot = R.from_matrix(mat[:, :3, :3]).as_euler('xyz').astype(np.float32)
             pose = np.concatenate([trans, rot], axis=-1)
             pose_len = pose.shape[0]
-            # Gripper closure
-            closure = self.load_csv(episode_dir.joinpath("AngleData.csv"))
-            closure = closure[:, 1][:, np.newaxis]
-            closure_len = closure.shape[0]
+            # Gripper angle
+            angle = self.load_csv(episode_dir.joinpath("AngleData.csv"))
             # Force and torque
             force_l = self.load_csv(episode_dir.joinpath("L_ForceData.csv"))
             force_r = self.load_csv(episode_dir.joinpath("R_ForceData.csv"))
             # We assume data collected by iPhone to have the same length. If not,
             # the episode would be discarded and would not appear in the dataset.
-            if not rgb_len == depth_len == pose_len == closure_len:
+            if not rgb_len == depth_len == pose_len:
                 print(f"WARNING: episode {episode_dir.name} is discarded.")
                 continue
-
-            forces = [force_l, force_r]
-            for i, force in enumerate(forces):
-                interp = self.fit_interpolator(force)
-                forces[i] = interp(depth_ts)
-
+            # Align different sensory inputs. This is done via interpolation.
+            states = [angle, force_l, force_r]
+            for i, state in enumerate(states):
+                if state.shape[0] != rgb_len:
+                    interp = self.fit_interpolator(state)
+                    states[i] = interp(depth_ts)
+                else:
+                    states[i] = state[:, 1:]
+                    
             episode = list()
             for step in range(rgb_len):
                 episode.append({
                     'rgb': rgb[step],
                     'depth': depth[step],
                     'pose': pose[step],
-                    'force_l': forces[0][step],
-                    'force_r': forces[1][step],
-                    'action': np.concatenate((pose[step], closure[step])),
+                    'force_l': states[1][step],
+                    'force_r': states[2][step],
+                    'action': np.concatenate((pose[step], states[0][step])),
                     'language_instruction': language_instruction
                 })
-
-            # # Align data from different sensors. This is done via interpolation.
-            # data = dict(
-            #     pose=pose,
-            #     closure=closure,
-            #     force_l=force_l,
-            #     force_r=force_r
-            # )
-            # for key, val in data.items():
-            #     interp = self.fit_interpolator(val, self.interp_type)
-            #     data[key] = interp(depth_ts)
-                
-            # episode = list()
-            # for step in range(episode_len):
-            #     episode.append({
-            #         'rgb': rgb[step],
-            #         'depth': depth[step],
-            #         'pose': data['pose'][step],
-            #         'force_l': data['force_l'][step],
-            #         'force_r': data['force_r'][step],
-            #         'action': np.concatenate((data['pose'][step], data['closure'][step]), axis=-1),
-            #         'language_instruction': language_instruction
-            #     })
 
             global_step += 1
             np.save(str(self.save_dir.joinpath(f"episode_{str(global_step).zfill(3)}.npy")), episode)
@@ -265,15 +246,15 @@ class FormatConverter:
 #             trans = mat[:, :3, 3]
 #             rot = R.from_matrix(mat[:, :3, :3]).as_euler("xyz", degrees=True)
 #             pose = np.concatenate([pose_ts, trans, rot], axis=-1)
-#             # Gripper closure
-#             closure = self.load_csv(episode_dir.joinpath("AngleData.csv"))
+#             # Gripper angle
+#             angle = self.load_csv(episode_dir.joinpath("AngleData.csv"))
 #             # Force and torque
 #             force_l = self.load_csv(episode_dir.joinpath("L_ForceData.csv"))
 #             force_r = self.load_csv(episode_dir.joinpath("R_ForceData.csv"))
 #             # Align data from different sensors. This is done via interpolation.
 #             # Intuitively, we preserve the data with the maximum frequency and
 #             # interpolate other data with lower frequencies.
-#             data_list = [rgb, depth, pose, closure, force_l, force_r]
+#             data_list = [rgb, depth, pose, angle, force_l, force_r]
 #             len_list = [data.shape[0] for data in data_list]
 #             episode_len = max(len_list) 
 #             episode_ts = data_list[len_list.index(episode_len)][:, 0]

@@ -10,14 +10,15 @@ import matplotlib.pyplot as plt
 dataset_name = "magiclaw_dataset"
 module = importlib.import_module(dataset_name)
 ds = tfds.load(dataset_name, split='train')
-ds = ds.shuffle(100)
+ds = ds.shuffle(6)
 
 # Visualize RGB observation
 for i, episode in enumerate(ds.take(1)):
-    image = list(episode['steps'])[10]['observation']['rgb'].numpy()
+    image = list(episode['steps'])[100]['observation']['rgb'].numpy()
+    instruction = list(episode['steps'])[100]['language_instruction'].numpy().decode("utf-8")
     plt.figure()
     plt.imshow(image)
-    plt.title("Example Image")
+    plt.title(instruction)
 
 # Visualize action and state statistics
 actions, poses, forces_l, forces_r = [], [], [], []
