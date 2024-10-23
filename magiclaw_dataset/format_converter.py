@@ -14,7 +14,7 @@ class FormatConverter:
     def __init__(
         self,
         episode_dir: str,
-        save_dir: Optional[str] = "data",
+        save_dir: str,
         split: Optional[str] = 'train',
         interp_type: Optional[str] = 'nearest'
     ) -> None:
@@ -58,6 +58,7 @@ class FormatConverter:
                     # Make sure empty data is not loaded
                     data.append(line)
             file.close()
+        assert len(data) != 0, "Could not load empty CSV files!"
         data.pop(0)  # Remove headers
         data = np.stack(data).astype(np.float32)
         # Remove gripper angles with values -1
